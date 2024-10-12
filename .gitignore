@@ -1,0 +1,13 @@
+__pychae__
+.idea
+.ipynb_checkpoints
+__pycache__
+*.onnx
+*.pt
+*.bin
+
+PAE/Input/*.txt
+PAE/Output/*.txt
+
+GNN/Input/*.txt
+GNN/Output/*.txt
