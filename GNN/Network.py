@@ -95,20 +95,20 @@ class ExpertLinear(torch.nn.Module):
 
 if __name__ == '__main__':
 
-    load = "Data"
+    InputDir = "Data"
     gating_indices = torch.tensor([(5122 + i) for i in range(260)])
     main_indices = torch.tensor([(0 + i) for i in range(5122)])
 
-    save = "./Training"
+    OutputDir = "./Training"
 
-    InputFile = load + "/Input.bin"
-    OutputFile = load + "/Output.bin"
-    # InputFile = utility.ReadBinary(InputFile, sample_count, input_dim)
-    # OutputFile = utility.ReadBinary(OutputFile, sample_count, output_dim)
-    Xshape = utility.LoadTxtAsInt(load + "/InputShape.txt", True)
-    Yshape = utility.LoadTxtAsInt(load + "/OutputShape.txt", True)
-    Xnorm = utility.LoadTxt(load + "/InputNormalization.txt", True)
-    Ynorm = utility.LoadTxt(load + "/OutputNormalization.txt", True)
+    InputFile = InputDir + "/Input.bin"
+    OutputFile = InputDir + "/Output.bin"
+    InputFile = utility.ReadBinary(InputFile, sample_count, input_dim)
+    OutputFile = utility.ReadBinary(OutputFile, sample_count, output_dim)
+    # Xshape = utility.LoadTxtAsInt(InputDir + "/InputShape.txt", True)
+    # Yshape = utility.LoadTxtAsInt(InputDir + "/OutputShape.txt", True)
+    Xnorm = utility.LoadTxt(InputDir + "/InputNormalization.txt", True)
+    Ynorm = utility.LoadTxt(InputDir + "/OutputNormalization.txt", True)
 
     utility.SetSeed(23456)
 
@@ -171,7 +171,7 @@ if __name__ == '__main__':
             error += loss.item()
     
         utility.SaveONNX(
-            path=save+'/'+str(epoch+1)+'.onnx',
+            path=OutputDir+'/'+str(epoch+1)+'.onnx',
             model=network,
             input_size=input_dim,
             input_names=['X'],

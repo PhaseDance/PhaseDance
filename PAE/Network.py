@@ -1,18 +1,16 @@
+import matplotlib.pyplot as plt
+import random
+import torch
+import numpy as np
+import Plotting as plot
+import PAE as model
+import Library.AdamWR.cyclic_scheduler as cyclic_scheduler
+import Library.AdamWR.adamw as adamw
+import Library.Utility as utility
 import sys
 
 sys.path.append("../")
 
-import Library.Utility as utility
-import Library.AdamWR.adamw as adamw
-import Library.AdamWR.cyclic_scheduler as cyclic_scheduler
-import PAE as model
-import Plotting as plot
-
-import numpy as np
-import torch
-import random
-
-import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
 
@@ -22,8 +20,10 @@ if __name__ == '__main__':
     joints = 24  # joints of the character skeleton
 
     frames = int(window * fps) + 1
-    input_channels = 3 * joints  # number of channels along time in the input data (here 3*J as XYZ-component of each joint)
-    phase_channels = 10  # desired number of latent phase channels (usually between 2-10)
+    # number of channels along time in the input data (here 3*J as XYZ-component of each joint)
+    input_channels = 3 * joints
+    # desired number of latent phase channels (usually between 2-10)
+    phase_channels = 8
 
     epochs = 10
     batch_size = 3200
@@ -32,10 +32,12 @@ if __name__ == '__main__':
     restart_period = 10
     restart_mult = 2
 
-    plotting_interval = 500  # update visualization at every n-th batch (visualization only)
-    pca_sequence_count = 10  # number of motion sequences visualized in the PCA (visualization only)
-    test_sequence_ratio = 0.01  # ratio of randomly selected test sequences (visualization only)
-
+    # update visualization at every n-th batch (visualization only)
+    plotting_interval = 500
+    # number of motion sequences visualized in the PCA (visualization only)
+    pca_sequence_count = 10
+    # ratio of randomly selected test sequences (visualization only)
+    test_sequence_ratio = 0.01
 
     # End Parameter Section
 
@@ -59,18 +61,17 @@ if __name__ == '__main__':
         batch = batch.reshape(shape[0], batch.shape[1] * batch.shape[2])
         return batch
 
-
     def Item(value):
         return value.detach().cpu()
 
+    InputDir = "Input"
+    OutputDir = "Output"
+    utility.MakeDirectory(OutputDir)
 
-    Load = "Dataset"
-    Save = "Training"
-    utility.MakeDirectory(Save)
-
-    Data = Load + "/Data.bin"
-    Shape = utility.LoadTxtAsInt(Load + "/DataShape.txt")
-    Sequences = utility.LoadSequences(Load + "/Sequences.txt", True, Shape[0])
+    Data = InputDir + "/Data.bin"
+    Shape = utility.LoadTxtAsInt(InputDir + "/DataShape.txt")
+    Sequences = utility.LoadSequences(
+        InputDir + "/Sequences.txt", True, Shape[0])
 
     # Sequences = utility.LoadSequences(Path+"/Sequences.txt", True, 100000)
     # Sequences = Sequences[np.where(Sequences == 1)]
@@ -119,7 +120,8 @@ if __name__ == '__main__':
     figure4, ax4 = plt.subplots(2, 1)
     dist_amps = []
     dist_freqs = []
-    loss_history = utility.PlottingWindow("Loss History", ax=ax4, min=0, drawInterval=plotting_interval)
+    loss_history = utility.PlottingWindow(
+        "Loss History", ax=ax4, min=0, drawInterval=plotting_interval)
 
     # Build network model
     network = utility.ToDevice(model.Model(
@@ -131,8 +133,10 @@ if __name__ == '__main__':
 
     print("Training Phases")
     # Setup optimizer and loss function
-    optimizer = adamw.AdamW(network.parameters(), lr=learning_rate, weight_decay=weight_decay)
-    scheduler = cyclic_scheduler.CyclicLRWithRestarts(optimizer=optimizer, batch_size=batch_size, epoch_size=sample_count, restart_period=restart_period, t_mult=restart_mult, policy="cosine", verbose=True)
+    optimizer = adamw.AdamW(network.parameters(),
+                            lr=learning_rate, weight_decay=weight_decay)
+    scheduler = cyclic_scheduler.CyclicLRWithRestarts(
+        optimizer=optimizer, batch_size=batch_size, epoch_size=sample_count, restart_period=restart_period, t_mult=restart_mult, policy="cosine", verbose=True)
     loss_function = torch.nn.MSELoss()
     # loss_function = utility.GMSELoss()
 
@@ -176,14 +180,22 @@ if __name__ == '__main__':
             if loss_history.Counter == 0:
                 network.eval()
 
-                plot.Functions(ax1[0], Item(train_batch[0]).reshape(network.input_channels, frames), -1.0, 1.0, -5.0, 5.0, title="Motion Curves" + " " + str(network.input_channels) + "x" + str(frames), showAxes=False)
-                plot.Functions(ax1[1], Item(latent[0]), -1.0, 1.0, -2.0, 2.0, title="Latent Convolutional Embedding" + " " + str(phase_channels) + "x" + str(frames), showAxes=False)
-                plot.Circles(ax1[2], Item(params[0][0]).squeeze(), Item(params[2][0]).squeeze(), title="Learned Phase Timing" + " " + str(phase_channels) + "x" + str(2), showAxes=False)
-                plot.Functions(ax1[3], Item(signal[0]), -1.0, 1.0, -2.0, 2.0, title="Latent Parametrized Signal" + " " + str(phase_channels) + "x" + str(frames), showAxes=False)
-                plot.Functions(ax1[4], Item(yPred[0]).reshape(network.input_channels, frames), -1.0, 1.0, -5.0, 5.0, title="Curve Reconstruction" + " " + str(network.input_channels) + "x" + str(frames), showAxes=False)
-                plot.Function(ax1[5], [Item(train_batch[0]), Item(yPred[0])], -1.0, 1.0, -5.0, 5.0, colors=[(0, 0, 0), (0, 1, 1)], title="Curve Reconstruction (Flattened)" + " " + str(1) + "x" + str(network.input_channels * frames), showAxes=False)
-                plot.Distribution(ax3[0], dist_amps, title="Amplitude Distribution")
-                plot.Distribution(ax3[1], dist_freqs, title="Frequency Distribution")
+                plot.Functions(ax1[0], Item(train_batch[0]).reshape(network.input_channels, frames), -1.0, 1.0, -5.0,
+                               5.0, title="Motion Curves" + " " + str(network.input_channels) + "x" + str(frames), showAxes=False)
+                plot.Functions(ax1[1], Item(latent[0]), -1.0, 1.0, -2.0, 2.0, title="Latent Convolutional Embedding" +
+                               " " + str(phase_channels) + "x" + str(frames), showAxes=False)
+                plot.Circles(ax1[2], Item(params[0][0]).squeeze(), Item(params[2][0]).squeeze(
+                ), title="Learned Phase Timing" + " " + str(phase_channels) + "x" + str(2), showAxes=False)
+                plot.Functions(ax1[3], Item(signal[0]), -1.0, 1.0, -2.0, 2.0, title="Latent Parametrized Signal" +
+                               " " + str(phase_channels) + "x" + str(frames), showAxes=False)
+                plot.Functions(ax1[4], Item(yPred[0]).reshape(network.input_channels, frames), -1.0, 1.0, -5.0, 5.0,
+                               title="Curve Reconstruction" + " " + str(network.input_channels) + "x" + str(frames), showAxes=False)
+                plot.Function(ax1[5], [Item(train_batch[0]), Item(yPred[0])], -1.0, 1.0, -5.0, 5.0, colors=[(0, 0, 0), (0, 1, 1)],
+                              title="Curve Reconstruction (Flattened)" + " " + str(1) + "x" + str(network.input_channels * frames), showAxes=False)
+                plot.Distribution(ax3[0], dist_amps,
+                                  title="Amplitude Distribution")
+                plot.Distribution(ax3[1], dist_freqs,
+                                  title="Frequency Distribution")
 
                 indices = gather_window + random.choice(test_sequences)
                 _, _, _, params = network(LoadBatches(indices))
@@ -193,11 +205,16 @@ if __name__ == '__main__':
                     freq = params[1][:, i]
                     amps = params[2][:, i]
                     offs = params[3][:, i]
-                    plot.Phase1D(ax2[i, 0], Item(phase), Item(amps), color=(0, 0, 0), title=("1D Phase Values" if i == 0 else None), showAxes=False)
-                    plot.Phase2D(ax2[i, 1], Item(phase), Item(amps), title=("2D Phase Vectors" if i == 0 else None), showAxes=False)
-                    plot.Functions(ax2[i, 2], Item(freq).transpose(0, 1), -1.0, 1.0, 0.0, 4.0, title=("Frequencies" if i == 0 else None), showAxes=False)
-                    plot.Functions(ax2[i, 3], Item(amps).transpose(0, 1), -1.0, 1.0, 0.0, 1.0, title=("Amplitudes" if i == 0 else None), showAxes=False)
-                    plot.Functions(ax2[i, 4], Item(offs).transpose(0, 1), -1.0, 1.0, -1.0, 1.0, title=("Offsets" if i == 0 else None), showAxes=False)
+                    plot.Phase1D(ax2[i, 0], Item(phase), Item(amps), color=(0, 0, 0), title=(
+                        "1D Phase Values" if i == 0 else None), showAxes=False)
+                    plot.Phase2D(ax2[i, 1], Item(phase), Item(amps), title=(
+                        "2D Phase Vectors" if i == 0 else None), showAxes=False)
+                    plot.Functions(ax2[i, 2], Item(freq).transpose(
+                        0, 1), -1.0, 1.0, 0.0, 4.0, title=("Frequencies" if i == 0 else None), showAxes=False)
+                    plot.Functions(ax2[i, 3], Item(amps).transpose(
+                        0, 1), -1.0, 1.0, 0.0, 1.0, title=("Amplitudes" if i == 0 else None), showAxes=False)
+                    plot.Functions(ax2[i, 4], Item(offs).transpose(
+                        0, 1), -1.0, 1.0, -1.0, 1.0, title=("Offsets" if i == 0 else None), showAxes=False)
 
                 # Visualization
                 pca_indices = []
@@ -216,13 +233,15 @@ if __name__ == '__main__':
                     pca_batches.append(manifold)
                     pivot += len(indices)
 
-                plot.PCA2D(ax4[0], pca_indices, pca_batches, "Phase Manifold (" + str(pca_sequence_count) + " Random Sequences)")
+                plot.PCA2D(ax4[0], pca_indices, pca_batches, "Phase Manifold (" +
+                           str(pca_sequence_count) + " Random Sequences)")
 
                 plt.gcf().canvas.draw_idle()
             plt.gcf().canvas.start_event_loop(1e-5)
             # End Visualization Section
 
-        torch.save(network, Save + "/" + str(epoch + 1) + "_" + str(phase_channels) + "Channels" + ".pt")
+        torch.save(network, OutputDir + "/" + str(epoch + 1) +
+                   "_" + str(phase_channels) + "Channels" + ".pt")
 
         print('Epoch', epoch + 1, loss_history.CumulativeValue())
         figure1.savefig("Motion Curves.png")
@@ -234,7 +253,7 @@ if __name__ == '__main__':
         print("Saving Parameters")
         network.eval()
         E = np.arange(sample_count)
-        with open(Save + '/Parameters_' + str(epoch + 1) + '.txt', 'w') as file:
+        with open(OutputDir + '/Parameters_' + str(epoch + 1) + '.txt', 'w') as file:
             for i in range(0, sample_count, batch_size):
                 utility.PrintProgress(i, sample_count)
                 eval_indices = E[i:i + batch_size]
